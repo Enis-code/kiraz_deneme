@@ -174,14 +174,14 @@ public:
     StmtList(std::vector<Node::Ptr> stmts) : m_stmts(stmts) {}
     
     std::string as_string() const override {
-        std::string result = "[";
+        std::string result = "Module([";
         bool first = true;
         for (const auto &stmt : m_stmts) {
             if (!first) result += ", ";
             first = false;
             result += stmt->as_string();
         }
-        result += "]";
+        result += "])";
         return result;
     }
     
