@@ -3,6 +3,10 @@
 
 #include "main.h"
 
+#ifndef YYUNDEF
+#define YYUNDEF (-1)
+#endif
+
 class Token {
 public:
     using Ptr = std::shared_ptr<Token>;

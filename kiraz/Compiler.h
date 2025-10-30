@@ -5,6 +5,9 @@
 #include <kiraz/Node.h>
 
 #include <lexer.hpp>
+#include <parser.hpp>
+
+extern "C" int yyparse(void);
 
 enum class ScopeType {
     Module,
