@@ -52,7 +52,7 @@ public:
     Div(Node::Ptr left, Node::Ptr right) : BinaryOp(left, right) {}
     
     std::string as_string() const override {
-        return fmt::format("Divf(l={}, r={})", m_left->as_string(), m_right->as_string());
+        return fmt::format("DivF(l={}, r={})", m_left->as_string(), m_right->as_string());
     }
 };
 
@@ -222,7 +222,7 @@ public:
         : m_name(name), m_value(value) {}
     
     std::string as_string() const override {
-        return fmt::format("Assign(n={}, v={})", m_name->as_string(), m_value->as_string());
+        return fmt::format("Assign(l={}, r={})", m_name->as_string(), m_value->as_string());
     }
     
 private:
