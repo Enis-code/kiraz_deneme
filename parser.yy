@@ -59,18 +59,32 @@ extern int yylineno;
 
 %%
 
-/* Program entry point - a single statement */
-stmt: func_stmt                 { Node::add<ast::StmtList>(std::vector{$1}); }
-    | func_stmt OP_SCOLON       { Node::add<ast::StmtList>(std::vector{$1}); }
-    | let_stmt OP_SCOLON        { Node::add<ast::StmtList>(std::vector{$1}); }
-    | assignment_stmt OP_SCOLON { Node::add<ast::StmtList>(std::vector{$1}); }
-    | class_stmt OP_SCOLON      { Node::add<ast::StmtList>(std::vector{$1}); }
-    | if_stmt OP_SCOLON         { Node::add<ast::StmtList>(std::vector{$1}); }
-    | while_stmt OP_SCOLON      { Node::add<ast::StmtList>(std::vector{$1}); }
-    | import_stmt               { Node::add<ast::StmtList>(std::vector{$1}); }
-    | return_stmt               { Node::add<ast::StmtList>(std::vector{$1}); }
-    | expr OP_SCOLON            { Node::add<ast::StmtList>(std::vector{$1}); }
+/* Program entry point */
+stmt: single_stmt               { 
+        Node::add<ast::StmtList>(std::vector{$1}); 
+      }
+    | stmt single_stmt          { 
+        auto root = Node::get_root();
+        auto list = std::dynamic_pointer_cast<ast::StmtList>(root);
+        if (list) {
+            list->add($2);
+        } else {
+            Node::add<ast::StmtList>(std::vector{$1, $2});
+        }
+      }
     | REJECTED                  { yyerror("Rejected token"); }
+    ;
+
+single_stmt: func_stmt
+    | func_stmt OP_SCOLON       { $$ = $1; }
+    | let_stmt OP_SCOLON
+    | assignment_stmt OP_SCOLON
+    | class_stmt OP_SCOLON
+    | if_stmt OP_SCOLON
+    | while_stmt OP_SCOLON
+    | import_stmt
+    | return_stmt
+    | expr OP_SCOLON
     ;
 
 /* Function definition */
