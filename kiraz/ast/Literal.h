@@ -33,7 +33,7 @@ public:
     }
     
     std::string as_string() const override {
-        return fmt::format("Integer({})", m_value);
+        return fmt::format("Int({})", m_value);
     }
     
     int64_t get_value() const { return m_value; }
@@ -50,7 +50,7 @@ public:
     String(const std::string &value) : m_value(value) {}
     
     std::string as_string() const override {
-        return fmt::format("String(\"{}\")", m_value);
+        return fmt::format("Str({})", m_value);
     }
     
     const std::string& get_value() const { return m_value; }
