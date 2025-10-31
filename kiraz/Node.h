@@ -60,6 +60,14 @@ public:
 
     virtual bool is_class_stmt_list() const { return false; }
     virtual void set_class_stmt_list() { assert(false); }
+    
+    virtual bool is_if() const { return false; }
+    virtual bool is_while() const { return false; }
+    virtual bool is_import() const { return false; }
+    virtual bool is_return() const { return false; }
+    virtual bool is_dot() const { return false; }
+    virtual bool is_call() const { return false; }
+    virtual bool is_assign() const { return false; }
 
     virtual Node::Cptr get_parent() const { return nullptr; }
 

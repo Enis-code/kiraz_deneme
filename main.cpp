@@ -51,8 +51,21 @@ static int handle_mode_text(std::string_view arg) {
 }
 
 static int handle_mode_file(std::string_view arg) {
-    fmt::print("TODO\n");
-    return ERR;
+    FILE *file = fopen(arg.data(), "r");
+    if (!file) {
+        fmt::print("Error: Could not open file '{}'\n", arg);
+        return ERR;
+    }
+    
+    yyin = file;
+    auto ret = yyparse();
+    fclose(file);
+    
+    if (Node::current_root()) {
+        fmt::print("{}\n", Node::current_root()->as_string());
+    }
+    
+    return ret;
 }
 
 int main(int argc, char **argv) {
