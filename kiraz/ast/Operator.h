@@ -206,11 +206,7 @@ public:
         if (scope_str.rfind("Module(", 0) == 0) {
             scope_str = scope_str.substr(7, scope_str.length() - 8);
         }
-<<<<<<< HEAD
         return fmt::format("Func(n={}, a=FuncArgs({}), r={}, s={})", 
-=======
-        return fmt::format("Func(n={}, a={}, r={}, s={})", 
->>>>>>> d58639422717638a95d6b4a7567efe7c9289aee1
                           m_name->as_string(), 
                           m_args->as_string(), 
                           m_ret_type->as_string(),
