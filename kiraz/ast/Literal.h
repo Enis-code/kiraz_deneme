@@ -50,7 +50,29 @@ public:
     String(const std::string &value) : m_value(value) {}
     
     std::string as_string() const override {
-        return fmt::format("Str({})", m_value);
+        // Escape characters
+        std::string escaped = m_value;
+        size_t pos = 0;
+        while ((pos = escaped.find('\n', pos)) != std::string::npos) {
+            escaped.replace(pos, 1, "\\n");
+            pos += 2;
+        }
+        pos = 0;
+        while ((pos = escaped.find('\t', pos)) != std::string::npos) {
+            escaped.replace(pos, 1, "\\t");
+            pos += 2;
+        }
+        pos = 0;
+        while ((pos = escaped.find('\r', pos)) != std::string::npos) {
+            escaped.replace(pos, 1, "\\r");
+            pos += 2;
+        }
+        pos = 0;
+        while ((pos = escaped.find('"', pos)) != std::string::npos) {
+            escaped.replace(pos, 1, "\\\"");
+            pos += 2;
+        }
+        return fmt::format("Str({})", escaped);
     }
     
     const std::string& get_value() const { return m_value; }

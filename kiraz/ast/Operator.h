@@ -165,6 +165,8 @@ public:
     
     bool is_funcarg_list() const override { return true; }
     
+    void add(Node::Ptr arg) { m_args.push_back(arg); }
+    
 private:
     std::vector<Node::Ptr> m_args;
 };
@@ -200,11 +202,15 @@ public:
         : m_name(name), m_args(args), m_ret_type(ret_type), m_scope(scope) {}
     
     std::string as_string() const override {
+        std::string scope_str = m_scope->as_string();
+        if (scope_str.rfind("Module(", 0) == 0) {
+            scope_str = scope_str.substr(7, scope_str.length() - 8);
+        }
         return fmt::format("Func(n={}, a={}, r={}, s={})", 
                           m_name->as_string(), 
                           m_args->as_string(), 
                           m_ret_type->as_string(),
-                          m_scope->as_string());
+                          scope_str);
     }
     
     bool is_func() const override { return true; }
@@ -225,9 +231,150 @@ public:
         return fmt::format("Assign(l={}, r={})", m_name->as_string(), m_value->as_string());
     }
     
+    bool is_assign() const override { return true; }
+    
 private:
     Node::Ptr m_name;
     Node::Ptr m_value;
+};
+
+class Class : public Node {
+public:
+    Class(Node::Ptr name, Node::Ptr scope) 
+        : m_name(name), m_scope(scope) {}
+    
+    std::string as_string() const override {
+        std::string scope_str = m_scope->as_string();
+        if (scope_str.rfind("Module(", 0) == 0) {
+            scope_str = scope_str.substr(7, scope_str.length() - 8);
+        }
+        return fmt::format("Class(n={}, s={})", 
+                          m_name->as_string(), 
+                          scope_str);
+    }
+    
+    bool is_class() const override { return true; }
+    
+private:
+    Node::Ptr m_name;
+    Node::Ptr m_scope;
+};
+
+class If : public Node {
+public:
+    If(Node::Ptr cond, Node::Ptr then_stmts, Node::Ptr else_stmts) 
+        : m_cond(cond), m_then(then_stmts), m_else(else_stmts) {}
+    
+    std::string as_string() const override {
+        auto unwrap = [](const std::string& s) {
+            if (s.rfind("Module(", 0) == 0) {
+                return s.substr(7, s.length() - 8);
+            }
+            return s;
+        };
+        
+        if (m_else && m_else->is_if()) {
+            return fmt::format("If(?={}, then={}, else={})", 
+                              m_cond->as_string(), 
+                              unwrap(m_then->as_string()),
+                              m_else->as_string());
+        }
+        
+        return fmt::format("If(?={}, then={}, else={})", 
+                          m_cond->as_string(), 
+                          unwrap(m_then->as_string()),
+                          unwrap(m_else->as_string()));
+    }
+    
+    bool is_if() const override { return true; }
+    
+private:
+    Node::Ptr m_cond;
+    Node::Ptr m_then;
+    Node::Ptr m_else;
+};
+
+class While : public Node {
+public:
+    While(Node::Ptr cond, Node::Ptr repeat_stmts) 
+        : m_cond(cond), m_repeat(repeat_stmts) {}
+    
+    std::string as_string() const override {
+        std::string repeat_str = m_repeat->as_string();
+        if (repeat_str.rfind("Module(", 0) == 0) {
+            repeat_str = repeat_str.substr(7, repeat_str.length() - 8);
+        }
+        return fmt::format("While(?={}, repeat={})", 
+                          m_cond->as_string(), 
+                          repeat_str);
+    }
+    
+    bool is_while() const override { return true; }
+    
+private:
+    Node::Ptr m_cond;
+    Node::Ptr m_repeat;
+};
+
+class Import : public Node {
+public:
+    Import(Node::Ptr name) : m_name(name) {}
+    
+    std::string as_string() const override {
+        return fmt::format("Import({})", m_name->as_string());
+    }
+    
+    bool is_import() const override { return true; }
+    
+private:
+    Node::Ptr m_name;
+};
+
+class Return : public Node {
+public:
+    Return(Node::Ptr value) : m_value(value) {}
+    
+    std::string as_string() const override {
+        return fmt::format("Return({})", m_value->as_string());
+    }
+    
+    bool is_return() const override { return true; }
+    
+private:
+    Node::Ptr m_value;
+};
+
+class Dot : public Node {
+public:
+    Dot(Node::Ptr lhs, Node::Ptr rhs) : m_lhs(lhs), m_rhs(rhs) {}
+    
+    std::string as_string() const override {
+        return fmt::format("Dot(l={}, r={})", m_lhs->as_string(), m_rhs->as_string());
+    }
+    
+    bool is_dot() const override { return true; }
+    
+private:
+    Node::Ptr m_lhs;
+    Node::Ptr m_rhs;
+};
+
+class Call : public Node {
+public:
+    Call(Node::Ptr name, Node::Ptr args) 
+        : m_name(name), m_args(args) {}
+    
+    std::string as_string() const override {
+        return fmt::format("Call(n={}, a=FuncArgs({}))", 
+                          m_name->as_string(), 
+                          m_args->as_string());
+    }
+    
+    bool is_call() const override { return true; }
+    
+private:
+    Node::Ptr m_name;
+    Node::Ptr m_args;
 };
 
 }
