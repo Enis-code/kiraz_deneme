@@ -52,12 +52,38 @@ WHITESPACE  [ \t\r]+
 
     /* String Literals */
 \"[^\"]*\"      { colno += yyleng; 
-                  std::string str(yytext + 1, yyleng - 2); /* Remove quotes */
+                  std::string str(yytext + 1, yyleng - 2);
+                  size_t pos = 0;
+                  while ((pos = str.find("\\n", pos)) != std::string::npos) {
+                      str.replace(pos, 2, "\n");
+                      pos += 1;
+                  }
+                  pos = 0;
+                  while ((pos = str.find("\\t", pos)) != std::string::npos) {
+                      str.replace(pos, 2, "\t");
+                      pos += 1;
+                  }
+                  pos = 0;
+                  while ((pos = str.find("\\r", pos)) != std::string::npos) {
+                      str.replace(pos, 2, "\r");
+                      pos += 1;
+                  }
+                  pos = 0;
+                  while ((pos = str.find("\\\\", pos)) != std::string::npos) {
+                      str.replace(pos, 2, "\\");
+                      pos += 1;
+                  }
+                  pos = 0;
+                  while ((pos = str.find("\\\"", pos)) != std::string::npos) {
+                      str.replace(pos, 2, "\"");
+                      pos += 1;
+                  }
                   curtoken = Token::New<String>(L_STRING, str); 
                   yylval = std::make_shared<ast::String>(str);
                   return L_STRING; }
 
-    /* Operators and Punctuation (2-char operators first!) */
+    /* Operators */
+"--"+           { colno += yyleng; curtoken = Token::New<Rejected>(yytext); return REJECTED; }
 "=="            { colno += yyleng; curtoken = Token::New<Operator>(OP_EQ, yytext); return OP_EQ; }
 "!="            { colno += yyleng; curtoken = Token::New<Operator>(OP_NE, yytext); return OP_NE; }
 "<="            { colno += yyleng; curtoken = Token::New<Operator>(OP_LE, yytext); return OP_LE; }
@@ -77,6 +103,7 @@ WHITESPACE  [ \t\r]+
 ":"             { colno += yyleng; curtoken = Token::New<Operator>(OP_COLON, yytext); return OP_COLON; }
 ";"             { colno += yyleng; curtoken = Token::New<Operator>(OP_SCOLON, yytext); return OP_SCOLON; }
 ","             { colno += yyleng; curtoken = Token::New<Operator>(OP_COMMA, yytext); return OP_COMMA; }
+"."             { colno += yyleng; curtoken = Token::New<Operator>(OP_DOT, yytext); return OP_DOT; }
 
     /* Reject anything else */
 .               { colno += yyleng; curtoken = Token::New<Rejected>(yytext); return REJECTED; }

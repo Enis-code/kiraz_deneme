@@ -48,12 +48,14 @@ extern int yylineno;
 %token    OP_COLON       /* : */
 %token    OP_SCOLON      /* ; */
 %token    OP_COMMA       /* , */
+%token    OP_DOT         /* . */
 
-/* Operator precedence (lowest to highest) */
-%left OP_EQ OP_NE OP_LT OP_GT OP_LE OP_GE  /* Comparison operators */
+/* Operator precedence */
+%left OP_EQ OP_NE OP_LT OP_GT OP_LE OP_GE
 %left OP_PLUS OP_MINUS
 %left OP_MULT OP_DIV
-%nonassoc UMINUS  /* Unary minus - higher precedence */
+%left OP_DOT
+%nonassoc UMINUS
 
 %%
 
@@ -62,6 +64,11 @@ stmt: func_stmt                 { Node::add<ast::StmtList>(std::vector{$1}); }
     | func_stmt OP_SCOLON       { Node::add<ast::StmtList>(std::vector{$1}); }
     | let_stmt OP_SCOLON        { Node::add<ast::StmtList>(std::vector{$1}); }
     | assignment_stmt OP_SCOLON { Node::add<ast::StmtList>(std::vector{$1}); }
+    | class_stmt OP_SCOLON      { Node::add<ast::StmtList>(std::vector{$1}); }
+    | if_stmt OP_SCOLON         { Node::add<ast::StmtList>(std::vector{$1}); }
+    | while_stmt OP_SCOLON      { Node::add<ast::StmtList>(std::vector{$1}); }
+    | import_stmt               { Node::add<ast::StmtList>(std::vector{$1}); }
+    | return_stmt               { Node::add<ast::StmtList>(std::vector{$1}); }
     | expr OP_SCOLON            { Node::add<ast::StmtList>(std::vector{$1}); }
     | REJECTED                  { yyerror("Rejected token"); }
     ;
@@ -74,11 +81,17 @@ func_stmt: KW_FUNC IDENTIFIER OP_LPAREN func_args OP_RPAREN OP_COLON type_annota
 
 /* Function arguments */
 func_args: /* empty */          { $$ = std::make_shared<ast::FuncArgs>(std::vector<Node::Ptr>{}); }
-    | func_arg_list             { $$ = std::make_shared<ast::FuncArgs>(std::vector{$1}); }
+    | func_arg_list             { $$ = $1; }
     ;
 
-func_arg_list: func_arg                         { $$ = $1; }
-    | func_arg_list OP_COMMA func_arg           { $$ = $3; }
+func_arg_list: func_arg                         { 
+        $$ = std::make_shared<ast::FuncArgs>(std::vector{$1}); 
+      }
+    | func_arg_list OP_COMMA func_arg           { 
+        auto list = std::dynamic_pointer_cast<ast::FuncArgs>($1);
+        list->add($3);
+        $$ = $1;
+      }
     ;
 
 func_arg: IDENTIFIER OP_COLON type_annotation   {
@@ -93,10 +106,7 @@ type_annotation: IDENTIFIER     {
     ;
 
 /* Let statement */
-let_stmt: KW_LET IDENTIFIER {
-        $$ = std::make_shared<ast::Let>($2, nullptr, nullptr);
-      }
-    | KW_LET IDENTIFIER OP_ASSIGN expr {
+let_stmt: KW_LET IDENTIFIER OP_ASSIGN expr {
         $$ = std::make_shared<ast::Let>($2, nullptr, $4);
       }
     | KW_LET IDENTIFIER OP_COLON type_annotation {
@@ -110,6 +120,42 @@ let_stmt: KW_LET IDENTIFIER {
 /* Assignment statement */
 assignment_stmt: IDENTIFIER OP_ASSIGN expr {
         $$ = std::make_shared<ast::Assignment>($1, $3);
+      }
+    ;
+
+/* Class definition */
+class_stmt: KW_CLASS IDENTIFIER OP_LBRACE stmt_list OP_RBRACE {
+        $$ = Node::add<ast::Class>($2, $4);
+      }
+    ;
+
+/* If statement */
+if_stmt: KW_IF OP_LPAREN expr OP_RPAREN OP_LBRACE stmt_list OP_RBRACE {
+        $$ = Node::add<ast::If>($3, $6, std::make_shared<ast::StmtList>(std::vector<Node::Ptr>{}));
+      }
+    | KW_IF OP_LPAREN expr OP_RPAREN OP_LBRACE stmt_list OP_RBRACE KW_ELSE OP_LBRACE stmt_list OP_RBRACE {
+        $$ = Node::add<ast::If>($3, $6, $10);
+      }
+    | KW_IF OP_LPAREN expr OP_RPAREN OP_LBRACE stmt_list OP_RBRACE KW_ELSE if_stmt {
+        $$ = Node::add<ast::If>($3, $6, $9);
+      }
+    ;
+
+/* While statement */
+while_stmt: KW_WHILE OP_LPAREN expr OP_RPAREN OP_LBRACE stmt_list OP_RBRACE {
+        $$ = Node::add<ast::While>($3, $6);
+      }
+    ;
+
+/* Import statement */
+import_stmt: KW_IMPORT IDENTIFIER OP_SCOLON {
+        $$ = Node::add<ast::Import>($2);
+      }
+    ;
+
+/* Return statement */
+return_stmt: KW_RETURN expr OP_SCOLON {
+        $$ = Node::add<ast::Return>($2);
       }
     ;
 
@@ -140,6 +186,31 @@ stmt_list: /* empty */                    { $$ = std::make_shared<ast::StmtList>
         list->add($2);
         $$ = $1;
       }
+    | stmt_list class_stmt OP_SCOLON     { 
+        auto list = std::dynamic_pointer_cast<ast::StmtList>($1);
+        list->add($2);
+        $$ = $1;
+      }
+    | stmt_list if_stmt OP_SCOLON        { 
+        auto list = std::dynamic_pointer_cast<ast::StmtList>($1);
+        list->add($2);
+        $$ = $1;
+      }
+    | stmt_list while_stmt OP_SCOLON     { 
+        auto list = std::dynamic_pointer_cast<ast::StmtList>($1);
+        list->add($2);
+        $$ = $1;
+      }
+    | stmt_list import_stmt              { 
+        auto list = std::dynamic_pointer_cast<ast::StmtList>($1);
+        list->add($2);
+        $$ = $1;
+      }
+    | stmt_list return_stmt              { 
+        auto list = std::dynamic_pointer_cast<ast::StmtList>($1);
+        list->add($2);
+        $$ = $1;
+      }
     ;
 
 /* Expressions */
@@ -158,6 +229,23 @@ expr: L_INTEGER                  { $$ = $1; }
     | expr OP_GT expr            { $$ = std::make_shared<ast::OpGt>($1, $3); }
     | expr OP_LE expr            { $$ = std::make_shared<ast::OpLe>($1, $3); }
     | expr OP_GE expr            { $$ = std::make_shared<ast::OpGe>($1, $3); }
+    | expr OP_DOT IDENTIFIER     { $$ = std::make_shared<ast::Dot>($1, $3); }
+    | expr OP_LPAREN call_args OP_RPAREN { $$ = std::make_shared<ast::Call>($1, $3); }
+    ;
+
+/* Call arguments */
+call_args: /* empty */           { $$ = std::make_shared<ast::FuncArgs>(std::vector<Node::Ptr>{}); }
+    | call_arg_list              { $$ = $1; }
+    ;
+
+call_arg_list: expr              { 
+        $$ = std::make_shared<ast::FuncArgs>(std::vector{$1}); 
+      }
+    | call_arg_list OP_COMMA expr { 
+        auto list = std::dynamic_pointer_cast<ast::FuncArgs>($1);
+        list->add($3);
+        $$ = $1;
+      }
     ;
 
 %%
