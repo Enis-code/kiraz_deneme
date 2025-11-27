@@ -15,6 +15,11 @@ public:
     Node::Ptr get_left() const { return m_left; }
     Node::Ptr get_right() const { return m_right; }
     
+    Node::Ptr compute_stmt_type(SymbolTable &st) override;
+    
+    virtual std::string get_op_symbol() const = 0;
+    virtual bool is_comparison() const { return false; }
+    
 protected:
     Node::Ptr m_left;
     Node::Ptr m_right;
@@ -27,6 +32,8 @@ public:
     std::string as_string() const override {
         return fmt::format("Add(l={}, r={})", m_left->as_string(), m_right->as_string());
     }
+    
+    std::string get_op_symbol() const override;
 };
 
 class Sub : public BinaryOp {
@@ -36,6 +43,8 @@ public:
     std::string as_string() const override {
         return fmt::format("Sub(l={}, r={})", m_left->as_string(), m_right->as_string());
     }
+    
+    std::string get_op_symbol() const override;
 };
 
 class Mult : public BinaryOp {
@@ -45,6 +54,8 @@ public:
     std::string as_string() const override {
         return fmt::format("Mult(l={}, r={})", m_left->as_string(), m_right->as_string());
     }
+    
+    std::string get_op_symbol() const override;
 };
 
 class Div : public BinaryOp {
@@ -54,6 +65,8 @@ public:
     std::string as_string() const override {
         return fmt::format("DivF(l={}, r={})", m_left->as_string(), m_right->as_string());
     }
+    
+    std::string get_op_symbol() const override;
 };
 
 class OpEq : public BinaryOp {
@@ -63,6 +76,9 @@ public:
     std::string as_string() const override {
         return fmt::format("OpEq(l={}, r={})", m_left->as_string(), m_right->as_string());
     }
+    
+    std::string get_op_symbol() const override;
+    bool is_comparison() const override { return true; }
 };
 
 class OpNe : public BinaryOp {
@@ -72,6 +88,9 @@ public:
     std::string as_string() const override {
         return fmt::format("OpNe(l={}, r={})", m_left->as_string(), m_right->as_string());
     }
+    
+    std::string get_op_symbol() const override;
+    bool is_comparison() const override { return true; }
 };
 
 class OpLt : public BinaryOp {
@@ -81,6 +100,9 @@ public:
     std::string as_string() const override {
         return fmt::format("OpLt(l={}, r={})", m_left->as_string(), m_right->as_string());
     }
+    
+    std::string get_op_symbol() const override;
+    bool is_comparison() const override { return true; }
 };
 
 class OpGt : public BinaryOp {
@@ -90,6 +112,9 @@ public:
     std::string as_string() const override {
         return fmt::format("OpGt(l={}, r={})", m_left->as_string(), m_right->as_string());
     }
+    
+    std::string get_op_symbol() const override;
+    bool is_comparison() const override { return true; }
 };
 
 class OpLe : public BinaryOp {
@@ -99,6 +124,9 @@ public:
     std::string as_string() const override {
         return fmt::format("OpLe(l={}, r={})", m_left->as_string(), m_right->as_string());
     }
+    
+    std::string get_op_symbol() const override;
+    bool is_comparison() const override { return true; }
 };
 
 class OpGe : public BinaryOp {
@@ -108,6 +136,9 @@ public:
     std::string as_string() const override {
         return fmt::format("OpGe(l={}, r={})", m_left->as_string(), m_right->as_string());
     }
+    
+    std::string get_op_symbol() const override;
+    bool is_comparison() const override { return true; }
 };
 
 class Let : public Node {
@@ -127,6 +158,13 @@ public:
         return result;
     }
     
+    Node::Ptr get_name() const { return m_name; }
+    Node::Ptr get_type() const { return m_type; }
+    Node::Ptr get_init() const { return m_init; }
+    
+    Node::Ptr compute_stmt_type(SymbolTable &st) override;
+    Node::Ptr add_to_symtab_ordered(SymbolTable &st) override;
+
 private:
     Node::Ptr m_name;
     Node::Ptr m_type;
@@ -142,6 +180,11 @@ public:
         return fmt::format("FArg(n={}, t={})", m_name->as_string(), m_type->as_string());
     }
     
+    Node::Ptr get_name() const { return m_name; }
+    Node::Ptr get_type() const { return m_type; }
+    
+    Node::Ptr compute_stmt_type(SymbolTable &st) override;
+
 private:
     Node::Ptr m_name;
     Node::Ptr m_type;
@@ -166,6 +209,9 @@ public:
     bool is_funcarg_list() const override { return true; }
     
     void add(Node::Ptr arg) { m_args.push_back(arg); }
+    const std::vector<Node::Ptr>& get_args() const { return m_args; }
+    
+    Node::Ptr compute_stmt_type(SymbolTable &st) override;
     
 private:
     std::vector<Node::Ptr> m_args;
@@ -190,7 +236,10 @@ public:
     bool is_stmt_list() const override { return true; }
     
     void add(Node::Ptr stmt) { m_stmts.push_back(stmt); }
+    std::vector<Node::Ptr>& get_stmts() { return m_stmts; }
     const std::vector<Node::Ptr>& get_stmts() const { return m_stmts; }
+    
+    Node::Ptr compute_stmt_type(SymbolTable &st) override;
     
 private:
     std::vector<Node::Ptr> m_stmts;
@@ -215,6 +264,14 @@ public:
     
     bool is_func() const override { return true; }
     
+    Node::Ptr get_name() const { return m_name; }
+    Node::Ptr get_args() const { return m_args; }
+    Node::Ptr get_ret_type() const { return m_ret_type; }
+    Node::Ptr get_scope() const { return m_scope; }
+    
+    Node::Ptr compute_stmt_type(SymbolTable &st) override;
+    Node::Ptr add_to_symtab_forward(SymbolTable &st) override;
+    
 private:
     Node::Ptr m_name;
     Node::Ptr m_args;
@@ -232,6 +289,11 @@ public:
     }
     
     bool is_assign() const override { return true; }
+    
+    Node::Ptr get_lhs() const { return m_name; }
+    Node::Ptr get_rhs() const { return m_value; }
+    
+    Node::Ptr compute_stmt_type(SymbolTable &st) override;
     
 private:
     Node::Ptr m_name;
@@ -255,9 +317,24 @@ public:
     
     bool is_class() const override { return true; }
     
+    Node::Ptr get_name() const { return m_name; }
+    Node::Ptr get_scope() const { return m_scope; }
+    
+    void set_subsymbols(const std::map<std::string, Node::Ptr>& syms) { m_subsymbols = syms; }
+    Node::SymTabEntry get_subsymbol(Node::Ptr) const override;
+    Node::SymTabEntry get_subsymbol_by_name(const std::string& name) const {
+        auto it = m_subsymbols.find(name);
+        if (it == m_subsymbols.end()) return {name, nullptr};
+        return {name, it->second};
+    }
+    
+    Node::Ptr compute_stmt_type(SymbolTable &st) override;
+    Node::Ptr add_to_symtab_forward(SymbolTable &st) override;
+    
 private:
     Node::Ptr m_name;
     Node::Ptr m_scope;
+    std::map<std::string, Node::Ptr> m_subsymbols;
 };
 
 class If : public Node {
@@ -288,6 +365,12 @@ public:
     
     bool is_if() const override { return true; }
     
+    Node::Ptr get_cond() const { return m_cond; }
+    Node::Ptr get_then() const { return m_then; }
+    Node::Ptr get_else() const { return m_else; }
+    
+    Node::Ptr compute_stmt_type(SymbolTable &st) override;
+    
 private:
     Node::Ptr m_cond;
     Node::Ptr m_then;
@@ -311,6 +394,11 @@ public:
     
     bool is_while() const override { return true; }
     
+    Node::Ptr get_cond() const { return m_cond; }
+    Node::Ptr get_repeat() const { return m_repeat; }
+    
+    Node::Ptr compute_stmt_type(SymbolTable &st) override;
+    
 private:
     Node::Ptr m_cond;
     Node::Ptr m_repeat;
@@ -326,6 +414,10 @@ public:
     
     bool is_import() const override { return true; }
     
+    Node::Ptr get_name() const { return m_name; }
+    
+    Node::Ptr compute_stmt_type(SymbolTable &st) override;
+    
 private:
     Node::Ptr m_name;
 };
@@ -340,6 +432,10 @@ public:
     
     bool is_return() const override { return true; }
     
+    Node::Ptr get_value() const { return m_value; }
+    
+    Node::Ptr compute_stmt_type(SymbolTable &st) override;
+    
 private:
     Node::Ptr m_value;
 };
@@ -353,6 +449,11 @@ public:
     }
     
     bool is_dot() const override { return true; }
+    
+    Node::Ptr get_lhs() const { return m_lhs; }
+    Node::Ptr get_rhs() const { return m_rhs; }
+    
+    Node::Ptr compute_stmt_type(SymbolTable &st) override;
     
 private:
     Node::Ptr m_lhs;
@@ -371,6 +472,11 @@ public:
     }
     
     bool is_call() const override { return true; }
+    
+    Node::Ptr get_name() const { return m_name; }
+    Node::Ptr get_args() const { return m_args; }
+    
+    Node::Ptr compute_stmt_type(SymbolTable &st) override;
     
 private:
     Node::Ptr m_name;

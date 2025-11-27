@@ -4,6 +4,7 @@
 #include <string>
 
 #include <kiraz/Compiler.h>
+#include <kiraz/ast/Operator.h>
 
 int64_t Node::s_next_id;
 std::vector<Node::Ptr> Node::s_roots;
@@ -36,6 +37,30 @@ Node::Ptr Node::pop_root() {
 const Node::Ptr &Node::get_root_before() {
     assert(s_roots.size() > 1);
     return *std::next(s_roots.rbegin());
+}
+
+const Node::Ptr &Node::get_first() {
+    assert(!s_roots.empty());
+    auto root = s_roots.back();
+    if (root && root->is_stmt_list()) {
+        auto stmt_list = std::dynamic_pointer_cast<ast::StmtList>(root);
+        if (stmt_list && !stmt_list->get_stmts().empty()) {
+            return stmt_list->get_stmts().front();
+        }
+    }
+    return root;
+}
+
+const Node::Ptr &Node::get_first_before() {
+    assert(s_roots.size() > 1);
+    auto root = *std::next(s_roots.rbegin());
+    if (root && root->is_stmt_list()) {
+        auto stmt_list = std::dynamic_pointer_cast<ast::StmtList>(root);
+        if (stmt_list && !stmt_list->get_stmts().empty()) {
+            return stmt_list->get_stmts().front();
+        }
+    }
+    return root;
 }
 
 Node::Ptr Node::gen_wat(WasmContext &) {

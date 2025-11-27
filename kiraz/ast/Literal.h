@@ -15,6 +15,11 @@ public:
     
     const std::string& get_name() const { return m_name; }
     
+    Node::Ptr compute_stmt_type(SymbolTable &st) override;
+    Node::SymTabEntry get_symbol(const SymbolTable &st) const override;
+    Node::SymTabEntry get_symbol() const override;
+    Node::SymTabEntry get_subsymbol(Node::Ptr) const override;
+    
 private:
     std::string m_name;
 };
@@ -39,6 +44,8 @@ public:
     int64_t get_value() const { return m_value; }
     int get_base() const { return m_base; }
     
+    Node::Ptr compute_stmt_type(SymbolTable &st) override;
+    
 private:
     int m_base;
     std::string m_text;
@@ -55,6 +62,8 @@ public:
     
     const std::string& get_value() const { return m_value; }
     
+    Node::Ptr compute_stmt_type(SymbolTable &st) override;
+    
 private:
     std::string m_value;
 };
@@ -68,9 +77,29 @@ public:
         return fmt::format("Signed({}, {})", m_op, m_operand->as_string());
     }
     
+    Node::Ptr compute_stmt_type(SymbolTable &st) override;
+    
 private:
     std::string m_op;
     Node::Ptr m_operand;
+};
+
+class BuiltinType : public Node {
+public:
+    BuiltinType(const std::string &name) : m_name(name) {}
+    
+    std::string as_string() const override {
+        return fmt::format("Builtin({})", m_name);
+    }
+    
+    const std::string& get_name() const { return m_name; }
+    
+    Node::Ptr compute_stmt_type(SymbolTable &st) override;
+    Node::SymTabEntry get_symbol(const SymbolTable &st) const override;
+    Node::SymTabEntry get_symbol() const override;
+    
+private:
+    std::string m_name;
 };
 
 }

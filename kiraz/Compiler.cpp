@@ -5,6 +5,7 @@
 #include <fmt/format.h>
 
 #include <resource/FILE_io_ki.h>
+#include <kiraz/ast/Literal.h>
 
 Node::Ptr SymbolTable::s_module_ki;
 Node::Ptr SymbolTable::s_module_io;
@@ -101,6 +102,38 @@ SymbolTable::SymbolTable()
         : m_symbols({
                   std::make_shared<Scope>(Scope::SymTab{}, ScopeType::Module, nullptr),
           }) {
+    // Add builtin types to module scope
+    auto& builtins = m_symbols.back()->symbols;
+    
+    // Type builtins
+    builtins["Boolean"] = std::make_shared<ast::BuiltinType>("Boolean");
+    builtins["Function"] = std::make_shared<ast::BuiltinType>("Function");
+    builtins["Class"] = std::make_shared<ast::BuiltinType>("Class");
+    builtins["Integer64"] = std::make_shared<ast::BuiltinType>("Integer64");
+    builtins["Module"] = std::make_shared<ast::BuiltinType>("Module");
+    builtins["String"] = std::make_shared<ast::BuiltinType>("String");
+    builtins["Null"] = std::make_shared<ast::BuiltinType>("Null");
+    
+    // Value builtins
+    auto null_type = builtins["Null"];
+    auto null_value = std::make_shared<ast::Id>("null");
+    null_value->set_stmt_type(null_type);
+    builtins["null"] = null_value;
+    
+    // Function builtins (and, or, not)
+    auto func_type = builtins["Function"];
+    auto and_func = std::make_shared<ast::Id>("and");
+    and_func->set_stmt_type(func_type);
+    builtins["and"] = and_func;
+    
+    auto or_func = std::make_shared<ast::Id>("or");
+    or_func->set_stmt_type(func_type);
+    builtins["or"] = or_func;
+    
+    auto not_func = std::make_shared<ast::Id>("not");
+    not_func->set_stmt_type(func_type);
+    builtins["not"] = not_func;
+    
     if (! s_module_io) {
         s_module_io = Compiler::current()->compile_module(FILE_io_ki);
     }
