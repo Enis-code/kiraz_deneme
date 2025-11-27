@@ -656,7 +656,12 @@ Node::Ptr Dot::compute_stmt_type(SymbolTable &st) {
         if (class_node) {
             auto sub = class_node->get_subsymbol_by_name(rhs_name);
             if (!sub) {
-                return set_error(FF("Identifier '{}' has no subsymbol '{}'", lhs_name, rhs_name));
+                // Check if rhs is a builtin type name (Integer64, Boolean, etc.)
+                if (rhs_name == "Integer64" || rhs_name == "Boolean" || rhs_name == "String" ||
+                    rhs_name == "Null" || rhs_name == "Module" || rhs_name == "Class" || rhs_name == "Function") {
+                    return set_error(FF("Identifier '{}' has no subsymbol '{}'", lhs_name, rhs_name));
+                }
+                return set_error(FF("Identifier '{}.{}' is not found", lhs_name, rhs_name));
             }
             subsym = sub;
         } else {
@@ -685,6 +690,48 @@ Node::Ptr Call::compute_stmt_type(SymbolTable &st) {
     }
     
     auto func = std::dynamic_pointer_cast<const Func>(func_sym.stmt);
+    
+    // Check for io.print special case first (before checking if func is valid)
+    bool is_dot_call = m_name->is_dot();
+    if (is_dot_call) {
+        auto dot = std::dynamic_pointer_cast<Dot>(m_name);
+        if (dot) {
+            std::string lhs_name = get_id_name(dot->get_lhs());
+            std::string rhs_name = get_id_name(dot->get_rhs());
+            if (lhs_name == "io" && rhs_name == "print") {
+                // io.print special handling
+                auto call_args = std::dynamic_pointer_cast<FuncArgs>(m_args);
+                size_t actual_count = call_args ? call_args->get_args().size() : 0;
+                
+                if (actual_count != 1) {
+                    return set_error(FF("Call to function 'io.print' has wrong number of arguments"));
+                }
+                
+                if (call_args) {
+                    auto& arg = call_args->get_args()[0];
+                    if (auto err = arg->compute_stmt_type(st)) return err;
+                    
+                    auto arg_type = arg->get_stmt_type();
+                    auto arg_id = std::dynamic_pointer_cast<const Id>(arg_type);
+                    auto arg_builtin = std::dynamic_pointer_cast<const BuiltinType>(arg_type);
+                    std::string arg_type_name = arg_id ? arg_id->get_name() : 
+                                                (arg_builtin ? arg_builtin->get_name() : "");
+                    
+                    if (arg_type_name != "Integer64" && arg_type_name != "String" && arg_type_name != "Boolean") {
+                        return set_error("io.print only accepts Integer64, String, or Boolean");
+                    }
+                }
+                
+                // Return Null
+                auto null_sym = st.get_symbol("Null");
+                if (null_sym) {
+                    set_stmt_type(null_sym.stmt);
+                }
+                return nullptr;
+            }
+        }
+    }
+    
     if (!func) {
         // Check if it's a builtin function
         std::string func_name = get_id_name(m_name);
@@ -715,44 +762,7 @@ Node::Ptr Call::compute_stmt_type(SymbolTable &st) {
     size_t expected_count = func_args ? func_args->get_args().size() : 0;
     size_t actual_count = call_args ? call_args->get_args().size() : 0;
     
-    // Check for io.print overload
     std::string full_name = get_id_name(m_name);
-    bool is_dot_call = m_name->is_dot();
-    if (is_dot_call) {
-        auto dot = std::dynamic_pointer_cast<Dot>(m_name);
-        if (dot) {
-            std::string lhs_name = get_id_name(dot->get_lhs());
-            std::string rhs_name = get_id_name(dot->get_rhs());
-            if (lhs_name == "io" && rhs_name == "print") {
-                // io.print accepts Integer64, String, or Boolean
-                if (actual_count != 1) {
-                    return set_error(FF("Call to function 'io.print' has wrong number of arguments"));
-                }
-                
-                if (call_args) {
-                    auto& arg = call_args->get_args()[0];
-                    if (auto err = arg->compute_stmt_type(st)) return err;
-                    
-                    auto arg_type = arg->get_stmt_type();
-                    auto arg_id = std::dynamic_pointer_cast<const Id>(arg_type);
-                    auto arg_builtin = std::dynamic_pointer_cast<const BuiltinType>(arg_type);
-                    std::string arg_type_name = arg_id ? arg_id->get_name() : 
-                                                (arg_builtin ? arg_builtin->get_name() : "");
-                    
-                    if (arg_type_name != "Integer64" && arg_type_name != "String" && arg_type_name != "Boolean") {
-                        return set_error("io.print only accepts Integer64, String, or Boolean");
-                    }
-                }
-                
-                // Return Null
-                auto null_sym = st.get_symbol("Null");
-                if (null_sym) {
-                    set_stmt_type(null_sym.stmt);
-                }
-                return nullptr;
-            }
-        }
-    }
     
     if (expected_count != actual_count) {
         return set_error(FF("Call to function '{}' has wrong number of arguments", full_name));
