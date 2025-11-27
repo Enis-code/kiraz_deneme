@@ -41,26 +41,26 @@ const Node::Ptr &Node::get_root_before() {
 
 const Node::Ptr &Node::get_first() {
     assert(!s_roots.empty());
-    auto root = s_roots.back();
+    const auto& root = s_roots.back();
     if (root && root->is_stmt_list()) {
         auto stmt_list = std::dynamic_pointer_cast<ast::StmtList>(root);
         if (stmt_list && !stmt_list->get_stmts().empty()) {
             return stmt_list->get_stmts().front();
         }
     }
-    return root;
+    return s_roots.back();
 }
 
 const Node::Ptr &Node::get_first_before() {
     assert(s_roots.size() > 1);
-    auto root = *std::next(s_roots.rbegin());
+    const auto& root = *std::next(s_roots.rbegin());
     if (root && root->is_stmt_list()) {
         auto stmt_list = std::dynamic_pointer_cast<ast::StmtList>(root);
         if (stmt_list && !stmt_list->get_stmts().empty()) {
             return stmt_list->get_stmts().front();
         }
     }
-    return root;
+    return *std::next(s_roots.rbegin());
 }
 
 Node::Ptr Node::gen_wat(WasmContext &) {
