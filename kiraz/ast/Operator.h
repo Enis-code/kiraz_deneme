@@ -2,6 +2,7 @@
 #define KIRAZ_AST_OPERATOR_H
 
 #include <cassert>
+#include <map>
 
 #include <kiraz/Node.h>
 

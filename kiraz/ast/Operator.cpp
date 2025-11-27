@@ -95,7 +95,7 @@ Node::Ptr Let::add_to_symtab_ordered(SymbolTable &st) {
     }
     
     Node::Ptr type_node = m_type;
-    Node::Ptr init_type = nullptr;
+    Node::Cptr init_type = nullptr;
     
     // Compute initializer type if present
     if (m_init) {
