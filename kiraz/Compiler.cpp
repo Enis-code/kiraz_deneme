@@ -120,6 +120,16 @@ SymbolTable::SymbolTable()
     null_value->set_stmt_type(null_type);
     builtins["null"] = null_value;
     
+    // Boolean value builtins (true, false)
+    auto bool_type = builtins["Boolean"];
+    auto true_value = std::make_shared<ast::Id>("true");
+    true_value->set_stmt_type(bool_type);
+    builtins["true"] = true_value;
+    
+    auto false_value = std::make_shared<ast::Id>("false");
+    false_value->set_stmt_type(bool_type);
+    builtins["false"] = false_value;
+    
     // Function builtins (and, or, not)
     auto func_type = builtins["Function"];
     auto and_func = std::make_shared<ast::Id>("and");
