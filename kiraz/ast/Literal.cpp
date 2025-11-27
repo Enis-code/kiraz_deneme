@@ -27,6 +27,24 @@ Node::SymTabEntry Id::get_symbol() const {
 }
 
 Node::SymTabEntry Id::get_subsymbol(Node::Ptr rhs) const {
+    // For module 'io', lookup subsymbols from io module
+    if (m_name == "io") {
+        auto io_module = SymbolTable::get_module_io();
+        if (io_module) {
+            std::string rhs_name;
+            auto rhs_id = std::dynamic_pointer_cast<Id>(rhs);
+            if (rhs_id) {
+                rhs_name = rhs_id->get_name();
+            }
+            
+            // Try to get the subsymbol from io module's first statement
+            auto first = io_module->get_first();
+            if (first) {
+                return first->get_symbol(*m_cur_symtab);
+            }
+        }
+    }
+    
     // Id doesn't have subsymbols by default
     return {};
 }

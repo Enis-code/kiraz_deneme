@@ -22,6 +22,12 @@ static bool is_builtin_name(const std::string& name) {
 Node::Ptr BinaryOp::compute_stmt_type(SymbolTable &st) {
     set_cur_symtab(st.get_cur_symtab());
     
+    // Check placement - not allowed in module or class scope
+    auto scope_type = st.get_scope_type();
+    if (scope_type == ScopeType::Module || scope_type == ScopeType::Class) {
+        return set_error("Binary operation not allowed in this scope");
+    }
+    
     // Compute types of operands
     if (auto err = m_left->compute_stmt_type(st)) return err;
     if (auto err = m_right->compute_stmt_type(st)) return err;
@@ -83,10 +89,20 @@ Node::Ptr Let::compute_stmt_type(SymbolTable &st) {
 Node::Ptr Let::add_to_symtab_ordered(SymbolTable &st) {
     std::string var_name = get_id_name(m_name);
     
-    // Check if already exists in current scope
+    // Check if already exists (in any scope for func/method/class, only current for module)
     auto existing = st.get_symbol(var_name);
-    if (existing && existing.stmt->get_cur_symtab() == st.get_cur_symtab()) {
-        return set_error(FF("Identifier '{}' is already in symtab", var_name));
+    auto scope_type = st.get_scope_type();
+    
+    if (existing) {
+        // In module scope, only check current scope
+        if (scope_type == ScopeType::Module) {
+            if (existing.stmt->get_cur_symtab() == st.get_cur_symtab()) {
+                return set_error(FF("Identifier '{}' is already in symtab", var_name));
+            }
+        } else {
+            // In func/method/class, can't shadow parent scope variables
+            return set_error(FF("Identifier '{}' is already in symtab", var_name));
+        }
     }
     
     // Check builtin override
@@ -421,8 +437,15 @@ Node::Ptr Assignment::compute_stmt_type(SymbolTable &st) {
     std::string lhs_type_name = lhs_id ? lhs_id->get_name() : (lhs_builtin ? lhs_builtin->get_name() : "");
     
     if (lhs_type_name == "Module") {
-        auto module_name = get_id_name(m_name);
-        return set_error(FF("Overriding imported module '{}' is not allowed", module_name));
+        // Check if right side is also Module (special case for io=io)
+        auto rhs_id = std::dynamic_pointer_cast<const Id>(rhs_type);
+        auto rhs_builtin = std::dynamic_pointer_cast<const BuiltinType>(rhs_type);
+        std::string rhs_type_name = rhs_id ? rhs_id->get_name() : (rhs_builtin ? rhs_builtin->get_name() : "");
+        
+        if (rhs_type_name == "Module") {
+            auto module_name = get_id_name(m_name);
+            return set_error(FF("Overriding imported module '{}' is not allowed", module_name));
+        }
     }
     
     // Check type compatibility
@@ -514,10 +537,17 @@ Node::Ptr Import::compute_stmt_type(SymbolTable &st) {
     if (module_name == "io") {
         auto io_module = SymbolTable::get_module_io();
         if (io_module) {
-            st.add_symbol(module_name, io_module);
+            // Create a module wrapper node with proper type
+            auto module_id = std::make_shared<Id>(module_name);
+            auto module_type_sym = st.get_symbol("Module");
+            if (module_type_sym) {
+                module_id->set_stmt_type(module_type_sym.stmt);
+            }
+            module_id->set_cur_symtab(st.get_cur_symtab());
+            
+            st.add_symbol(module_name, module_id);
             m_name->set_cur_symtab(st.get_cur_symtab());
             
-            auto module_type_sym = st.get_symbol("Module");
             if (module_type_sym) {
                 set_stmt_type(module_type_sym.stmt);
                 m_name->set_stmt_type(module_type_sym.stmt);
@@ -558,11 +588,17 @@ Node::Ptr Return::compute_stmt_type(SymbolTable &st) {
     // Check type match
     auto value_id = std::dynamic_pointer_cast<const Id>(value_type);
     auto value_builtin = std::dynamic_pointer_cast<const BuiltinType>(value_type);
+    auto value_class = std::dynamic_pointer_cast<const Class>(value_type);
     auto ret_id = std::dynamic_pointer_cast<const Id>(ret_type_sym.stmt);
     auto ret_builtin = std::dynamic_pointer_cast<const BuiltinType>(ret_type_sym.stmt);
+    auto ret_class = std::dynamic_pointer_cast<const Class>(ret_type_sym.stmt);
     
-    std::string value_type_name = value_id ? value_id->get_name() : (value_builtin ? value_builtin->get_name() : "");
-    std::string ret_type_name = ret_id ? ret_id->get_name() : (ret_builtin ? ret_builtin->get_name() : "");
+    std::string value_type_name = value_id ? value_id->get_name() : 
+                                  (value_builtin ? value_builtin->get_name() : 
+                                   (value_class ? get_id_name(value_class->get_name()) : ""));
+    std::string ret_type_name = ret_id ? ret_id->get_name() : 
+                                (ret_builtin ? ret_builtin->get_name() : 
+                                 (ret_class ? get_id_name(ret_class->get_name()) : ""));
     
     if (value_type_name != ret_type_name) {
         return set_error(FF("Return statement type '{}' does not match function return type '{}'",
@@ -583,11 +619,33 @@ Node::Ptr Dot::compute_stmt_type(SymbolTable &st) {
     
     // Get subsymbol
     std::string rhs_name = get_id_name(m_rhs);
+    std::string lhs_name = get_id_name(m_lhs);
     
     // Check if lhs is a module or class instance
     auto lhs_sym = m_lhs->get_symbol(st);
     if (!lhs_sym) {
-        return set_error(FF("Identifier '{}' is not found", get_id_name(m_lhs)));
+        return set_error(FF("Identifier '{}' is not found", lhs_name));
+    }
+    
+    // Special handling for io module
+    auto lhs_type_id = std::dynamic_pointer_cast<const Id>(lhs_type);
+    auto lhs_type_builtin = std::dynamic_pointer_cast<const BuiltinType>(lhs_type);
+    std::string lhs_type_name = lhs_type_id ? lhs_type_id->get_name() : (lhs_type_builtin ? lhs_type_builtin->get_name() : "");
+    
+    if (lhs_type_name == "Module" && lhs_name == "io") {
+        // io module - only io.print is allowed
+        if (rhs_name == "print") {
+            // Return a function type for io.print
+            auto func_type_sym = st.get_symbol("Function");
+            if (func_type_sym) {
+                set_stmt_type(func_type_sym.stmt);
+                m_rhs->set_stmt_type(func_type_sym.stmt);
+                m_rhs->set_cur_symtab(st.get_cur_symtab());
+            }
+            return nullptr;
+        } else {
+            return set_error(FF("Identifier '{}.{}' is not found", lhs_name, rhs_name));
+        }
     }
     
     // Get subsymbol from lhs
@@ -598,12 +656,11 @@ Node::Ptr Dot::compute_stmt_type(SymbolTable &st) {
         if (class_node) {
             auto sub = class_node->get_subsymbol_by_name(rhs_name);
             if (!sub) {
-                return set_error(FF("Identifier '{}' has no subsymbol '{}'", 
-                                  get_id_name(m_lhs), rhs_name));
+                return set_error(FF("Identifier '{}' has no subsymbol '{}'", lhs_name, rhs_name));
             }
             subsym = sub;
         } else {
-            return set_error(FF("Identifier '{}.{}' is not found", get_id_name(m_lhs), rhs_name));
+            return set_error(FF("Identifier '{}.{}' is not found", lhs_name, rhs_name));
         }
     }
     
