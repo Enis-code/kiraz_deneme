@@ -4,14 +4,16 @@
 #include <fmt/format.h>
 #include <resource/FILE_io_ki.h>
 
+extern Token::Ptr curtoken;
+
+namespace kiraz { // <--- EKLENDİ
+
 Node::Ptr SymbolTable::s_module_ki;
 Node::Ptr SymbolTable::s_module_io;
 
 SymbolTable::~SymbolTable() {}
 
 Compiler *Compiler::s_current;
-
-extern Token::Ptr curtoken;
 
 Compiler::Compiler() {
     assert(! s_current);
@@ -143,3 +145,5 @@ WasmContext::Coords WasmContext::add_to_memory(uint32_t s) {
     m_memory.push_back((s >> 24) & 0xFF);
     return {offset, 4}; 
 }
+
+} // namespace kiraz
