@@ -1,13 +1,16 @@
+#ifndef KIRAZ_COMPILER_H
+#define KIRAZ_COMPILER_H
 
 #include <cassert>
 #include <map>
+#include <sstream>
+#include <vector>
+#include <string>
 
 #include <kiraz/Node.h>
-
 #include <lexer.hpp>
-#include <parser.hpp>
 
-extern "C" int yyparse(void);
+namespace kiraz { // <--- BU SATIR EKSİKTİ, EKLENDİ
 
 enum class ScopeType {
     Module,
@@ -117,18 +120,7 @@ public:
         return {reinterpret_cast<const char *>(m_memory.data()), m_memory.size()};
     }
 
-    /**
-     * @brief add_to_memory: Adds the given string to static memory
-     * @param s: String to add
-     * @return Memory coordinates of the given string
-     */
     Coords add_to_memory(const std::string &s);
-
-    /**
-     * @brief add_to_memory: Adds the given u32 to static memory
-     * @param u: u32 to add
-     * @return Memory coordinates of the given u32
-     */
     Coords add_to_memory(uint32_t u);
 
     auto &body() { return m_streams.back().body; }
@@ -180,3 +172,7 @@ private:
     WasmContext m_ctx;
     static Compiler *s_current;
 };
+
+} // namespace kiraz
+
+#endif
