@@ -9,8 +9,8 @@
 
 #include <kiraz/Node.h>
 
+// Forward declaration
 namespace kiraz { class WasmContext; }
-using kiraz::WasmContext;
 
 namespace ast {
 
@@ -22,7 +22,8 @@ public:
     Node::Ptr get_right() const { return m_right; }
 
     Node::Ptr compute_stmt_type(SymbolTable &st) override;
-    Node::Ptr gen_wat(WasmContext &ctx) override;
+    // kiraz::WasmContext olarak tam ad kullanıldı
+    Node::Ptr gen_wat(kiraz::WasmContext &ctx) override;
 
     virtual std::string get_op_symbol() const = 0;
     virtual bool is_comparison() const { return false; }
@@ -41,7 +42,7 @@ public:
     }
 
     std::string get_op_symbol() const override;
-    Node::Ptr gen_wat(WasmContext &ctx) override;
+    Node::Ptr gen_wat(kiraz::WasmContext &ctx) override;
 };
 
 class Sub : public BinaryOp {
@@ -87,7 +88,7 @@ public:
 
     std::string get_op_symbol() const override;
     bool is_comparison() const override { return true; }
-    Node::Ptr gen_wat(WasmContext &ctx) override;
+    Node::Ptr gen_wat(kiraz::WasmContext &ctx) override;
 };
 
 class OpNe : public BinaryOp {
@@ -173,7 +174,7 @@ public:
 
     Node::Ptr compute_stmt_type(SymbolTable &st) override;
     Node::Ptr add_to_symtab_ordered(SymbolTable &st) override;
-    Node::Ptr gen_wat(WasmContext &ctx) override;
+    Node::Ptr gen_wat(kiraz::WasmContext &ctx) override;
 
 private:
     Node::Ptr m_name;
@@ -261,7 +262,7 @@ public:
     const std::vector<Node::Ptr> &get_stmts() const { return m_stmts; }
 
     Node::Ptr compute_stmt_type(SymbolTable &st) override;
-    Node::Ptr gen_wat(WasmContext &ctx) override;
+    Node::Ptr gen_wat(kiraz::WasmContext &ctx) override;
 
 private:
     std::vector<Node::Ptr> m_stmts;
@@ -297,7 +298,7 @@ public:
 
     Node::Ptr compute_stmt_type(SymbolTable &st) override;
     Node::Ptr add_to_symtab_forward(SymbolTable &st) override;
-    Node::Ptr gen_wat(WasmContext &ctx) override;
+    Node::Ptr gen_wat(kiraz::WasmContext &ctx) override;
 
 private:
     Node::Ptr m_name;
@@ -320,7 +321,7 @@ public:
     Node::Ptr get_rhs() const { return m_value; }
 
     Node::Ptr compute_stmt_type(SymbolTable &st) override;
-    Node::Ptr gen_wat(WasmContext &ctx) override;
+    Node::Ptr gen_wat(kiraz::WasmContext &ctx) override;
 
 private:
     Node::Ptr m_name;
@@ -391,7 +392,7 @@ public:
     Node::Ptr get_else() const { return m_else; }
 
     Node::Ptr compute_stmt_type(SymbolTable &st) override;
-    Node::Ptr gen_wat(WasmContext &ctx) override;
+    Node::Ptr gen_wat(kiraz::WasmContext &ctx) override;
 
 private:
     Node::Ptr m_cond;
@@ -453,7 +454,7 @@ public:
     Node::Ptr get_value() const { return m_value; }
 
     Node::Ptr compute_stmt_type(SymbolTable &st) override;
-    Node::Ptr gen_wat(WasmContext &ctx) override;
+    Node::Ptr gen_wat(kiraz::WasmContext &ctx) override;
 
 private:
     Node::Ptr m_value;
@@ -493,7 +494,7 @@ public:
     Node::Ptr get_args() const { return m_args; }
 
     Node::Ptr compute_stmt_type(SymbolTable &st) override;
-    Node::Ptr gen_wat(WasmContext &ctx) override;
+    Node::Ptr gen_wat(kiraz::WasmContext &ctx) override;
 
 private:
     Node::Ptr m_name;
@@ -521,7 +522,7 @@ public:
     void add(Node::Ptr stmt) { m_stmts.push_back(stmt); }
 
     Node::Ptr compute_stmt_type(SymbolTable &st) override { return nullptr; }
-    Node::Ptr gen_wat(WasmContext &ctx) override;
+    Node::Ptr gen_wat(kiraz::WasmContext &ctx) override;
 
 private:
     std::vector<Node::Ptr> m_stmts;
