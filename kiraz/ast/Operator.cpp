@@ -3,6 +3,8 @@
 #include <fmt/format.h>
 #include "Literal.h"
 
+using kiraz::WasmContext; // Bu dosya içinde WasmContext kullanımını kolaylaştırır
+
 namespace ast {
 
 Node::Ptr Func::gen_wat(WasmContext &ctx) {
@@ -33,7 +35,6 @@ Node::Ptr Func::gen_wat(WasmContext &ctx) {
 
     ctx.body() << "\n";
 
-    // m_scope kullanıldı
     if (auto stmts = std::dynamic_pointer_cast<StmtList>(m_scope)) {
         for (auto &stmt : stmts->get_stmts()) {
             if (auto let = std::dynamic_pointer_cast<Let>(stmt)) {
@@ -51,7 +52,6 @@ Node::Ptr Func::gen_wat(WasmContext &ctx) {
         }
     }
     
-    //  m_scope kullanıldı
     if (m_scope) {
         m_scope->gen_wat(ctx);
     }
@@ -158,7 +158,6 @@ Node::Ptr Module::gen_wat(WasmContext &ctx) {
     return nullptr;
 }
 
-// Bu fonksiyonların gövdesi boş kalabilir
 Node::Ptr BinaryOp::compute_stmt_type(SymbolTable &st) { return nullptr; }
 Node::Ptr BinaryOp::gen_wat(WasmContext &ctx) { return nullptr; }
 std::string Add::get_op_symbol() const { return "+"; }
@@ -191,4 +190,4 @@ Node::Ptr Return::compute_stmt_type(SymbolTable &st) { return nullptr; }
 Node::Ptr Dot::compute_stmt_type(SymbolTable &st) { return nullptr; }
 Node::Ptr Call::compute_stmt_type(SymbolTable &st) { return nullptr; }
 
-} 
+} // namespace ast
