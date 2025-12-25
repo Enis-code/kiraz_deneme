@@ -1,74 +1,61 @@
-
 #include "Node.h"
+#include <kiraz/Compiler.h> // SymbolTable ve WasmContext tanımları için şart
 
-#include <string>
+Node::Ptr Node::s_root;
+Node::Ptr Node::s_root_before;
 
-#include <kiraz/Compiler.h>
-#include <kiraz/ast/Operator.h>
-
-int64_t Node::s_next_id;
-std::vector<Node::Ptr> Node::s_roots;
-Token::Ptr curtoken;
-
-Node::Node() : m_id(FF("Ki{}", ++s_next_id)) {}
-
+Node::Node() {}
 Node::~Node() {}
 
-Node::Ptr Node::compute_stmt_type(SymbolTable &st) {
+// Semantik Analiz (Base implementasyonlar)
+Node::Ptr Node::compute_stmt_type(kiraz::SymbolTable &st) {
+    // Varsayılan olarak mevcut scope'u kaydet
     set_cur_symtab(st.get_cur_symtab());
     return nullptr;
 }
 
-Node::Ptr Node::add_to_symtab_forward(SymbolTable &st) {
+Node::Ptr Node::add_to_symtab_ordered(kiraz::SymbolTable &st) {
     return nullptr;
 }
 
-Node::Ptr Node::add_to_symtab_ordered(SymbolTable &st) {
+Node::Ptr Node::add_to_symtab_forward(kiraz::SymbolTable &st) {
     return nullptr;
+}
+
+Node::SymTabEntry Node::get_subsymbol(Ptr name) const {
+    return {};
+}
+
+// WASM Kod Üretimi (Base implementasyon)
+Node::Ptr Node::gen_wat(kiraz::WasmContext &ctx) {
+    return nullptr;
+}
+
+// Root Yönetimi
+void Node::set_root(Ptr root) {
+    s_root = root;
+    s_root_before = root; // Testler için yedeği tut
+}
+
+Node::Ptr Node::get_root() {
+    return s_root;
 }
 
 Node::Ptr Node::pop_root() {
-    assert(! s_roots.empty());
-    auto retval = s_roots.back();
-    s_roots.pop_back();
-    return retval;
+    auto temp = s_root;
+    s_root = nullptr;
+    return temp;
 }
 
-const Node::Ptr &Node::get_root_before() {
-    assert(s_roots.size() > 1);
-    return *std::next(s_roots.rbegin());
+void Node::reset_root() {
+    s_root = nullptr;
+    // s_root_before sıfırlanmaz, testler verify için kullanır
 }
 
-const Node::Ptr &Node::get_first() {
-    assert(!s_roots.empty());
-    const auto& root = s_roots.back();
-    if (root && root->is_stmt_list()) {
-        auto stmt_list = std::dynamic_pointer_cast<ast::StmtList>(root);
-        if (stmt_list && !stmt_list->get_stmts().empty()) {
-            return stmt_list->get_stmts().front();
-        }
-    }
-    return s_roots.back();
+Node::Ptr Node::current_root() {
+    return s_root;
 }
 
-const Node::Ptr &Node::get_first_before() {
-    assert(s_roots.size() > 1);
-    const auto& root = *std::next(s_roots.rbegin());
-    if (root && root->is_stmt_list()) {
-        auto stmt_list = std::dynamic_pointer_cast<ast::StmtList>(root);
-        if (stmt_list && !stmt_list->get_stmts().empty()) {
-            return stmt_list->get_stmts().front();
-        }
-    }
-    return *std::next(s_roots.rbegin());
-}
-
-Node::Ptr Node::gen_wat(WasmContext &) {
-    assert(! m_id.empty());
-    return nullptr;
-}
-
-Node::Ptr Node::gen_wat(WasmContext &, const std::string &id) const {
-    assert(! id.empty());
-    return nullptr;
+Node::Ptr Node::get_root_before() {
+    return s_root_before;
 }
