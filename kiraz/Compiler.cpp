@@ -1,11 +1,8 @@
-
 #include "Compiler.h"
 #include <cassert>
-
+#include <cstring> 
 #include <fmt/format.h>
-
 #include <resource/FILE_io_ki.h>
-#include <kiraz/ast/Literal.h>
 
 Node::Ptr SymbolTable::s_module_ki;
 Node::Ptr SymbolTable::s_module_io;
@@ -90,10 +87,30 @@ int Compiler::compile(Node::Ptr root) {
         Node::reset_root();
         return 1;
     }
+    
+    m_ctx.body() << "(module\n";
+    m_ctx.body() << "  (import \"io\" \"print_i\" (func $io_print_i (param i64)))\n";
+    m_ctx.body() << "  (import \"io\" \"print_s\" (func $io_print_s (param i32 i32)))\n";
+    m_ctx.body() << "  (import \"io\" \"print_b\" (func $io_print_b (param i32)))\n";
+    m_ctx.body() << "  (memory (export \"memory\") 1)\n";
 
     if (auto ret = root->gen_wat(m_ctx)) {
         return 2;
     }
+
+    if (!m_ctx.get_memory_view().empty()) {
+        m_ctx.body() << "  (data (i32.const 0) \"";
+        for (unsigned char c : m_ctx.get_memory()) {
+            if (isalnum(c)) {
+                m_ctx.body() << (char)c;
+            } else {
+                m_ctx.body() << fmt::format("\\{:02x}", c);
+            }
+        }
+        m_ctx.body() << "\")\n";
+    }
+
+    m_ctx.body() << ")\n";
 
     return 0;
 }
@@ -102,48 +119,6 @@ SymbolTable::SymbolTable()
         : m_symbols({
                   std::make_shared<Scope>(Scope::SymTab{}, ScopeType::Module, nullptr),
           }) {
-    // Add builtin types to module scope
-    auto& builtins = m_symbols.back()->symbols;
-    
-    // Type builtins
-    builtins["Boolean"] = std::make_shared<ast::BuiltinType>("Boolean");
-    builtins["Function"] = std::make_shared<ast::BuiltinType>("Function");
-    builtins["Class"] = std::make_shared<ast::BuiltinType>("Class");
-    builtins["Integer64"] = std::make_shared<ast::BuiltinType>("Integer64");
-    builtins["Module"] = std::make_shared<ast::BuiltinType>("Module");
-    builtins["String"] = std::make_shared<ast::BuiltinType>("String");
-    builtins["Null"] = std::make_shared<ast::BuiltinType>("Null");
-    
-    // Value builtins
-    auto null_type = builtins["Null"];
-    auto null_value = std::make_shared<ast::Id>("null");
-    null_value->set_stmt_type(null_type);
-    builtins["null"] = null_value;
-    
-    // Boolean value builtins (true, false)
-    auto bool_type = builtins["Boolean"];
-    auto true_value = std::make_shared<ast::Id>("true");
-    true_value->set_stmt_type(bool_type);
-    builtins["true"] = true_value;
-    
-    auto false_value = std::make_shared<ast::Id>("false");
-    false_value->set_stmt_type(bool_type);
-    builtins["false"] = false_value;
-    
-    // Function builtins (and, or, not)
-    auto func_type = builtins["Function"];
-    auto and_func = std::make_shared<ast::Id>("and");
-    and_func->set_stmt_type(func_type);
-    builtins["and"] = and_func;
-    
-    auto or_func = std::make_shared<ast::Id>("or");
-    or_func->set_stmt_type(func_type);
-    builtins["or"] = or_func;
-    
-    auto not_func = std::make_shared<ast::Id>("not");
-    not_func->set_stmt_type(func_type);
-    builtins["not"] = not_func;
-    
     if (! s_module_io) {
         s_module_io = Compiler::current()->compile_module(FILE_io_ki);
     }
@@ -154,10 +129,17 @@ SymbolTable::SymbolTable(ScopeType scope_type) : SymbolTable() {
 }
 
 WasmContext::Coords WasmContext::add_to_memory(const std::string &s) {
-    assert(! s.empty());
-    return {}; // TODO:
+    uint32_t offset = m_memory.size();
+    uint32_t length = s.length();
+    m_memory.insert(m_memory.end(), s.begin(), s.end());
+    return {offset, length};
 }
 
 WasmContext::Coords WasmContext::add_to_memory(uint32_t s) {
-    return {}; // TODO:
+    uint32_t offset = m_memory.size();
+    m_memory.push_back(s & 0xFF);
+    m_memory.push_back((s >> 8) & 0xFF);
+    m_memory.push_back((s >> 16) & 0xFF);
+    m_memory.push_back((s >> 24) & 0xFF);
+    return {offset, 4}; 
 }

@@ -1,90 +1,29 @@
-
 #include "Literal.h"
 #include <kiraz/Compiler.h>
+#include <fmt/format.h>
 
 namespace ast {
 
-// Id
-Node::Ptr Id::compute_stmt_type(SymbolTable &st) {
-    set_cur_symtab(st.get_cur_symtab());
-    
-    auto sym = st.get_symbol(m_name);
-    if (!sym) {
-        return set_error(FF("Identifier '{}' is not found", m_name));
-    }
-    
-    set_stmt_type(sym.stmt->get_stmt_type());
+Node::Ptr Integer::gen_wat(WasmContext &ctx) {
+    ctx.body() << fmt::format("    i64.const {}\n", m_value);
     return nullptr;
 }
 
-Node::SymTabEntry Id::get_symbol(const SymbolTable &st) const {
-    return st.get_symbol(m_name);
-}
-
-Node::SymTabEntry Id::get_symbol() const {
-    if (!m_cur_symtab) return {m_name, nullptr};
-    return m_cur_symtab->get_symbol(m_name);
-}
-
-Node::SymTabEntry Id::get_subsymbol(Node::Ptr rhs) const {
-    // Id doesn't have subsymbols by default
-    // io module subsymbols are handled specially in Dot::compute_stmt_type
-    return {};
-}
-
-// Integer
-Node::Ptr Integer::compute_stmt_type(SymbolTable &st) {
-    set_cur_symtab(st.get_cur_symtab());
-    
-    auto int_type = st.get_symbol("Integer64");
-    if (int_type) {
-        set_stmt_type(int_type.stmt);
-    }
-    
+Node::Ptr String::gen_wat(WasmContext &ctx) {
+    auto coords = ctx.add_to_memory(m_value);
+    ctx.body() << fmt::format("    i32.const {}\n", coords.offset);
+    ctx.body() << fmt::format("    i32.const {}\n", coords.length);
     return nullptr;
 }
 
-// String  
-Node::Ptr String::compute_stmt_type(SymbolTable &st) {
-    set_cur_symtab(st.get_cur_symtab());
-    
-    auto str_type = st.get_symbol("String");
-    if (str_type) {
-        set_stmt_type(str_type.stmt);
-    }
-    
+Node::Ptr Boolean::gen_wat(WasmContext &ctx) {
+    ctx.body() << fmt::format("    i32.const {}\n", m_value ? 1 : 0);
     return nullptr;
 }
 
-// Signed
-Node::Ptr Signed::compute_stmt_type(SymbolTable &st) {
-    set_cur_symtab(st.get_cur_symtab());
-    
-    if (auto err = m_operand->compute_stmt_type(st)) return err;
-    
-    // Result has same type as operand
-    set_stmt_type(m_operand->get_stmt_type());
-    
+Node::Ptr Id::gen_wat(WasmContext &ctx) {
+    ctx.body() << fmt::format("    local.get ${}\n", get_id());
     return nullptr;
-}
-
-// BuiltinType
-Node::Ptr BuiltinType::compute_stmt_type(SymbolTable &st) {
-    set_cur_symtab(st.get_cur_symtab());
-    
-    // Builtin types refer to themselves
-    set_stmt_type(shared_from_this());
-    
-    return nullptr;
-}
-
-Node::SymTabEntry BuiltinType::get_symbol(const SymbolTable &st) const {
-    return st.get_symbol(m_name);
-}
-
-Node::SymTabEntry BuiltinType::get_symbol() const {
-    if (!m_cur_symtab) return {m_name, nullptr};
-    return m_cur_symtab->get_symbol(m_name);
 }
 
 }

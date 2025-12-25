@@ -85,14 +85,14 @@ single_stmt: func_stmt
     | import_stmt
     | return_stmt
     | expr OP_SCOLON
+    | OP_LBRACE stmt_list OP_RBRACE { $$ = $2; }  
     ;
 
 /* Function definition */
 func_stmt: KW_FUNC IDENTIFIER OP_LPAREN func_args OP_RPAREN OP_COLON type_annotation OP_LBRACE stmt_list OP_RBRACE {
-        $$ = Node::add<ast::Func>($2, $4, $7, $9);
+        $$ = std::make_shared<ast::Func>($2, $4, $7, $9);
       }
     ;
-
 /* Function arguments */
 func_args: /* empty */          { $$ = std::make_shared<ast::FuncArgs>(std::vector<Node::Ptr>{}); }
     | func_arg_list             { $$ = $1; }
