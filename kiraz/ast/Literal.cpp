@@ -1,29 +1,49 @@
-#include "Literal.h"
+#ifndef KIRAZ_AST_LITERAL_H
+#define KIRAZ_AST_LITERAL_H
+
+#include <kiraz/Node.h>
 #include <kiraz/Compiler.h>
-#include <fmt/format.h>
 
 namespace ast {
 
-Node::Ptr Integer::gen_wat(WasmContext &ctx) {
-    ctx.body() << fmt::format("    i64.const {}\n", m_value);
-    return nullptr;
+class Integer : public Node {
+public:
+    Integer(int64_t v) : m_value(v) {}
+    std::string as_string() const override { return FF("Int({})", m_value); }
+    Node::Ptr gen_wat(kiraz::WasmContext &ctx) override;
+private:
+    int64_t m_value;
+};
+
+class String : public Node {
+public:
+    String(const std::string &v) : m_value(v) {}
+    std::string as_string() const override { return FF("Str({})", m_value); }
+    Node::Ptr gen_wat(kiraz::WasmContext &ctx) override;
+private:
+    std::string m_value;
+};
+
+class Boolean : public Node {
+public:
+    Boolean(bool v) : m_value(v) {}
+    std::string as_string() const override { return FF("Bool({})", m_value); }
+    Node::Ptr gen_wat(kiraz::WasmContext &ctx) override;
+private:
+    bool m_value;
+};
+
+class SignedNode : public Node {
+public:
+};
+
+class Id : public Node {
+public:
+    Id(const std::string &n) { set_id(n); }
+    std::string as_string() const override { return FF("Id({})", get_id()); }
+    Node::Ptr gen_wat(kiraz::WasmContext &ctx) override;
+};
+
 }
 
-Node::Ptr String::gen_wat(WasmContext &ctx) {
-    auto coords = ctx.add_to_memory(m_value);
-    ctx.body() << fmt::format("    i32.const {}\n", coords.offset);
-    ctx.body() << fmt::format("    i32.const {}\n", coords.length);
-    return nullptr;
-}
-
-Node::Ptr Boolean::gen_wat(WasmContext &ctx) {
-    ctx.body() << fmt::format("    i32.const {}\n", m_value ? 1 : 0);
-    return nullptr;
-}
-
-Node::Ptr Id::gen_wat(WasmContext &ctx) {
-    ctx.body() << fmt::format("    local.get ${}\n", get_id());
-    return nullptr;
-}
-
-}
+#endif
